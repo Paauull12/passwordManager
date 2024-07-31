@@ -63,7 +63,7 @@ class UI:
     def register(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
-        pass_hash = self.crypto_manager.hashPass(password)
+        pass_hash = Security.hashPass(password)
 
         if not username or not password:
             messagebox.showerror("Error", "Completeaza")
@@ -99,8 +99,8 @@ class UI:
     def browseFiles(self):
         filename = filedialog.askopenfilename(initialdir="/",
                                               title="Select a File",
-                                              filetypes=(("Text files",
-                                                          "*.txt*"),
+                                              filetypes=(("Pics",
+                                                          "*.png*"),
                                                          ("all files",
                                                           "*.*")))
         print(filename)
@@ -111,7 +111,15 @@ class UI:
 
         username, password = self.functionThatParsesThePicture(filepath)
 
-        print(username, password)
+        user = self.database_manager.get_user(username)
+        if user and Security.check_password(user[1], password):
+            self.user_id = user[0]
+            self.login_frame.destroy()
+            self.automaticLog_frame.destroy()
+            self.crypto_manager = Security(base64.urlsafe_b64encode(hashlib.sha256(password.encode()).digest()))
+            self.create_main_ui()
+        else:
+            messagebox.showerror("Error", "Not good user, pa")
 
     def login_automatic(self):
 
@@ -164,7 +172,7 @@ class UI:
         pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
         tessdata_dir_config = r'--tessdata-dir "C:\Program Files\Tesseract-OCR\tessdata"'
 
-        img = cv2.imread('imagineTest.jfif')
+        img = cv2.imread(imgPath)
         height, width, _ = img.shape
 
         data = pytesseract.image_to_data(img, config=myconfig, output_type=Output.DICT)
@@ -174,7 +182,7 @@ class UI:
         index = 0
         amountOfBoxes = len(data['text'])
         for i in range(amountOfBoxes):
-            if float(data['conf'][i]) > 80:
+            if float(data['conf'][i]) > 60:
                 if index == 0:
                     username = data['text'][i]
                     index += 1
